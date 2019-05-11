@@ -3,7 +3,7 @@ import argparse
 import torch
 from torch import nn
 from torch import optim
-from torch.backends import cudnn
+from torch import backends
 import torchvision
 from torchvision import datasets
 from torchvision import transforms
@@ -12,8 +12,6 @@ from torchvision import models
 from model import *
 import metrics
 import tensorboardX as tbx
-
-cudnn.benchmark = True
 
 
 class Dict(dict):
@@ -31,19 +29,20 @@ parser.add_argument("--discriminator_checkpoint", type=str, default="")
 parser.add_argument("--dataset", type=str, default="cifar10")
 args = parser.parse_args()
 
-hyper_params = Dict(
-    latent_size=512,
-    generator_learning_rate=2e-3,
-    generator_beta1=0.0,
-    generator_beta2=0.99,
-    generator_epsilon=1e-8,
-    discriminator_learning_rate=2e-3,
-    discriminator_beta1=0.0,
-    discriminator_beta2=0.99,
-    discriminator_epsilon=1e-8,
-    real_gradient_penalty_weight=5.0,
-    fake_gradient_penalty_weight=0.0,
-)
+backends.cudnn.benchmark = True
+device = torch.device("cuda")
+
+latent_size = 512
+generator_learning_rate = 2e-3
+generator_beta1 = 0.0
+generator_beta2 = 0.99
+generator_epsilon = 1e-8
+discriminator_learning_rate = 2e-3
+discriminator_beta1 = 0.0
+discriminator_beta2 = 0.99
+discriminator_epsilon = 1e-8
+real_gradient_penalty_weight = 5.0
+fake_gradient_penalty_weight = 0.1
 
 generator = Generator(
     min_resolution=4,
@@ -58,6 +57,7 @@ generator = Generator(
     num_features=512,
     out_channels=3
 )
+generator = generator.to(device)
 print(generator)
 
 if args.generator_checkpoint:
@@ -71,6 +71,7 @@ discriminator = Discriminator(
     num_classes=10,
     in_channels=3
 )
+discriminator = discriminator.to(device)
 print(discriminator)
 
 if args.discriminator_checkpoint:
@@ -78,22 +79,16 @@ if args.discriminator_checkpoint:
 
 generator_optimizer = optim.Adam(
     params=generator.parameters(),
-    lr=hyper_params.generator_learning_rate,
-    betas=(
-        hyper_params.generator_beta1,
-        hyper_params.generator_beta2
-    ),
-    eps=hyper_params.generator_epsilon
+    lr=generator_learning_rate,
+    betas=(generator_beta1, generator_beta2),
+    eps=generator_epsilon
 )
 
 discriminator_optimizer = optim.Adam(
     params=discriminator.parameters(),
-    lr=hyper_params.discriminator_learning_rate,
-    betas=(
-        hyper_params.discriminator_beta1,
-        hyper_params.discriminator_beta2
-    ),
-    eps=hyper_params.discriminator_epsilon
+    lr=discriminator_learning_rate,
+    betas=(discriminator_beta1, discriminator_beta2),
+    eps=discriminator_epsilon
 )
 
 train_dataset = datasets.CIFAR10(
@@ -148,7 +143,10 @@ def create_activation_generator(data_loader):
 
             with torch.no_grad():
 
-                latents = torch.randn(reals.size(0), hyper_params.latent_size)
+                reals = reals.to(device)
+                labels = labels.to(device)
+
+                latents = torch.randn(reals.size(0), latent_size).to(device)
                 fakes = generator(latents, labels)
 
                 reals = nn.functional.interpolate(
@@ -177,12 +175,13 @@ for epoch in range(args.num_epochs):
 
     for step, (reals, labels) in enumerate(train_data_loader):
 
-        discriminator.zero_grad()
-
         reals.requires_grad_(True)
+
+        reals = reals.to(device)
+        labels = labels.to(device)
         real_logits = discriminator(reals, labels)
 
-        latents = torch.randn(reals.size(0), hyper_params.latent_size)
+        latents = torch.randn(reals.size(0), latent_size).to(device)
         fakes = generator(latents, labels)
         fake_logits = discriminator(fakes.detach(), labels)
 
@@ -190,7 +189,7 @@ for epoch in range(args.num_epochs):
         fake_losses = nn.functional.softplus(fake_logits)
         discriminator_losses = real_losses + fake_losses
 
-        if hyper_params.real_gradient_penalty_weight:
+        if real_gradient_penalty_weight:
             real_gradients = torch.autograd.grad(
                 outputs=real_logits,
                 inputs=reals,
@@ -199,9 +198,9 @@ for epoch in range(args.num_epochs):
                 create_graph=True
             )[0]
             real_gradient_penalties = torch.sum(real_gradients ** 2, dim=(1, 2, 3))
-            discriminator_losses += real_gradient_penalties * hyper_params.real_gradient_penalty_weight
+            discriminator_losses += real_gradient_penalties * real_gradient_penalty_weight
 
-        if hyper_params.fake_gradient_penalty_weight:
+        if fake_gradient_penalty_weight:
             fake_gradients = torch.autograd.grad(
                 outputs=fake_logits,
                 inputs=fakes,
@@ -210,45 +209,45 @@ for epoch in range(args.num_epochs):
                 create_graph=True
             )
             fake_gradient_penalties = torch.sum(fake_gradients ** 2, dim=(1, 2, 3))
-            discriminator_losses += fake_gradient_penalties * hyper_params.fake_gradient_penalty_weight
+            discriminator_losses += fake_gradient_penalties * fake_gradient_penalty_weight
 
-        discriminator_loss = discriminator_losses.mean()
+        discriminator_loss = torch.mean(discriminator_losses)
+        discriminator.zero_grad()
         discriminator_loss.backward(retain_graph=True)
         discriminator_optimizer.step()
-
-        generator.zero_grad()
 
         fake_losses = nn.functional.softplus(-fake_logits)
         generator_losses = fake_losses
 
-        generator_loss = generator_losses.mean()
+        generator_loss = torch.mean(generator_losses)
+        generator.zero_grad()
         generator_loss.backward(retain_graph=False)
         generator_optimizer.step()
 
         if step % 10 == 0:
 
-            print(f"epoch: {epoch} discriminator_loss: {discriminator_loss} generator_loss: {generator_loss}")
+            print(f"epoch: {epoch} generator_loss: {generator_loss.item()} discriminator_loss: {discriminator_loss.item()}")
 
             if step % 100 == 0:
 
                 summary_writer.add_images(
                     tag="images/reals",
-                    img_tensor=reals,
+                    img_tensor=reals.numpy(),
                     global_step=global_step
                 )
                 summary_writer.add_images(
                     tag="images/fakes",
-                    img_tensor=fakes,
+                    img_tensor=fakes.numpy(),
                     global_step=global_step
                 )
                 summary_writer.add_scalar(
                     tag="loss/generator",
-                    scalar_value=generator_loss,
+                    scalar_value=generator_loss.item(),
                     global_step=global_step
                 )
                 summary_writer.add_scalar(
                     tag="loss/discriminator",
-                    scalar_value=discriminator_loss,
+                    scalar_value=discriminator_loss.item(),
                     global_step=global_step
                 )
 
@@ -258,7 +257,7 @@ for epoch in range(args.num_epochs):
     torch.save(discriminator.state_dict(), f"model/discriminator/epoch_{epoch}.pth")
 
 real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(test_data_loader)()))
-frechet_inception_distance = metrics.frechet_inception_distance(real_activations, fake_activations)
+frechet_inception_distance = metrics.frechet_inception_distance(real_activations.numpy(), fake_activations.numpy())
 
 summary_writer.add_scalar(
     tag="metrics/frechet_inception_distance",
