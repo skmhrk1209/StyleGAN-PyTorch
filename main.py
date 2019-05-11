@@ -31,6 +31,7 @@ args = parser.parse_args()
 
 backends.cudnn.benchmark = True
 device = torch.device("cuda:0")
+print(device)
 
 latent_size = 512
 generator_learning_rate = 2e-3
@@ -146,7 +147,7 @@ def create_activation_generator(data_loader):
                 reals = reals.to(device)
                 labels = labels.to(device)
 
-                latents = torch.randn(reals.size(0), latent_size).to(device)
+                latents = torch.randn(reals.shape[0], latent_size).to(device)
                 fakes = generator(latents, labels)
 
                 reals = nn.functional.interpolate(
