@@ -44,7 +44,7 @@ discriminator_beta1 = 0.0
 discriminator_beta2 = 0.99
 discriminator_epsilon = 1e-8
 real_gradient_penalty_weight = 5.0
-fake_gradient_penalty_weight = 0.1
+fake_gradient_penalty_weight = 0.0
 
 generator = Generator(
     min_resolution=4,
