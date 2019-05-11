@@ -24,6 +24,8 @@ class Dict(dict):
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--num_epochs", type=int, default=100)
+parser.add_argument("--generator_directory", type=str, default="")
+parser.add_argument("--discriminator_directory", type=str, default="")
 parser.add_argument("--generator_checkpoint", type=str, default="")
 parser.add_argument("--discriminator_checkpoint", type=str, default="")
 parser.add_argument("--dataset", type=str, default="cifar10")
@@ -231,8 +233,6 @@ for epoch in range(args.num_epochs):
 
         if step % 10 == 0:
 
-            print(type(generator_loss))
-
             print(f"epoch: {epoch} generator_loss: {generator_loss} discriminator_loss: {discriminator_loss}")
 
             if step % 100 == 0:
@@ -260,8 +260,8 @@ for epoch in range(args.num_epochs):
 
         global_step += 1
 
-    torch.save(generator.state_dict(), f"model/generator/epoch_{epoch}.pth")
-    torch.save(discriminator.state_dict(), f"model/discriminator/epoch_{epoch}.pth")
+    torch.save(generator.state_dict(), f"{args.generator_directory}/epoch_{epoch}.pth")
+    torch.save(discriminator.state_dict(), f"{args.discriminator_directory}/epoch_{epoch}.pth")
 
 real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(test_data_loader)()))
 frechet_inception_distance = metrics.frechet_inception_distance(real_activations.numpy(), fake_activations.numpy())
