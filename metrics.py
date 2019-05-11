@@ -18,11 +18,11 @@ def inception_score(logits):
     return np.exp(np.mean(kl_divergence(p, q)))
 
 
-def frechet_inception_distance(real_features, fake_features):
-    real_mean = np.mean(real_features, axis=0)
-    fake_mean = np.mean(fake_features, axis=0)
-    real_cov = np.cov(real_features, rowvar=False)
-    fake_cov = np.cov(fake_features, rowvar=False)
+def frechet_inception_distance(real_activations, fake_activations):
+    real_mean = np.mean(real_activations, axis=0)
+    fake_mean = np.mean(fake_activations, axis=0)
+    real_cov = np.cov(real_activations, rowvar=False)
+    fake_cov = np.cov(fake_activations, rowvar=False)
     mean_cov = sp.linalg.sqrtm(np.dot(real_cov, fake_cov))
     if np.iscomplexobj(mean_cov):
         if not np.allclose(np.diagonal(mean_cov).imag, 0.0, atol=1.0e-3):
@@ -39,15 +39,15 @@ def binomial_proportion_test(p, m, q, n, significance_level):
     return p_values < significance_level
 
 
-def num_different_bins(real_features, fake_features, num_bins=100, significance_level=0.05):
+def num_different_bins(real_activations, fake_activations, num_bins=100, significance_level=0.05):
 
-    clusters = cluster.KMeans(n_clusters=num_bins).fit(real_features)
+    clusters = cluster.KMeans(n_clusters=num_bins).fit(real_activations)
     real_labels, real_counts = np.unique(clusters.labels_, return_counts=True)
     real_proportions = real_counts / np.sum(real_counts)
 
     labels = np.array([
-        np.argmin(np.sum((fake_feature - clusters.cluster_centers_) ** 2, axis=1))
-        for fake_feature in fake_features
+        np.argmin(np.sum((fake_activation - clusters.cluster_centers_) ** 2, axis=1))
+        for fake_activation in fake_activations
     ])
     fake_labels, fake_counts = np.unique(labels, return_counts=True)
     fake_proportions = np.zeros_like(real_proportions)
@@ -55,9 +55,9 @@ def num_different_bins(real_features, fake_features, num_bins=100, significance_
 
     different_bins = binomial_proportion_test(
         p=real_proportions,
-        m=len(real_features),
+        m=len(real_activations),
         q=fake_proportions,
-        n=len(fake_features),
+        n=len(fake_activations),
         significance_level=significance_level
     )
     return np.count_nonzero(different_bins)

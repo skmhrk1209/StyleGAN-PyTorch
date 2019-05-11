@@ -10,6 +10,7 @@ from torchvision import utils
 from torchvision import models
 from model import *
 import metrics
+import tensorboardX as tbx
 
 
 class Dict(dict):
@@ -91,7 +92,7 @@ discriminator_optimizer = optim.Adam(
     eps=hyper_params.discriminator_epsilon
 )
 
-dataset = datasets.LSUN(
+train_dataset = datasets.LSUN(
     root="lsun",
     classes="train",
     transform=transforms.Compose([
@@ -101,14 +102,90 @@ dataset = datasets.LSUN(
     ])
 )
 
-data_loader = torch.utils.data.DataLoader(
-    dataset=dataset,
+train_data_loader = torch.utils.data.DataLoader(
+    dataset=train_dataset,
     batch_size=args.batch_size,
     shuffle=True
 )
 
+valid_dataset = datasets.LSUN(
+    root="lsun",
+    classes="val",
+    transform=transforms.Compose([
+        transforms.CenterCrop((256, 256)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+)
+
+valid_data_loader = torch.utils.data.DataLoader(
+    dataset=valid_dataset,
+    batch_size=args.batch_size,
+    shuffle=False
+)
+
+test_dataset = datasets.LSUN(
+    root="lsun",
+    classes="test",
+    transform=transforms.Compose([
+        transforms.CenterCrop((256, 256)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+)
+
+test_data_loader = torch.utils.data.DataLoader(
+    dataset=test_dataset,
+    batch_size=args.batch_size,
+    shuffle=False
+)
+
+
+def create_activation_generator(data_loader):
+
+    inception_v3 = models.inception_v3(pretrained=True)
+
+    for param in inception_v3.parameters():
+        param.requires_grad = False
+
+    inception_v3.fc = nn.Identity()
+
+    def activation_generator():
+
+        inception_v3.eval()
+
+        for reals, labels in data_loader:
+
+            with torch.no_grad():
+
+                latents = torch.randn(reals.size(0), hyper_params.latent_size)
+                fakes = generator(latents, labels)
+
+                reals = nn.functional.interpolate(
+                    input=reals,
+                    size=(299, 299),
+                    mode="bilinear"
+                )
+                fakes = nn.functional.interpolate(
+                    input=fakes,
+                    size=(299, 299),
+                    mode="bilinear"
+                )
+
+                real_activations = inception_v3(reals)
+                fake_activations = inception_v3(fakes)
+
+                yield real_activations, fake_activations
+
+    return activation_generator
+
+
+summary_writer = tbx.SummaryWriter()
+global_step = 0
+
 for epoch in range(args.num_epochs):
-    for reals, labels in data_loader:
+
+    for reals, labels in train_data_loader:
 
         discriminator.zero_grad()
 
@@ -158,63 +235,41 @@ for epoch in range(args.num_epochs):
         generator_loss.backward(retain_graph=False)
         generator_optimizer.step()
 
+        summary_writer.add_scalars(
+            main_tag="loss",
+            tag_scalar_dict=dict(
+                generator=generator_loss,
+                discriminator=discriminator_loss
+            ),
+            global_step=global_step
+        )
+
         print(f"epoch: {epoch} discriminator_loss: {discriminator_loss} generator_loss: {generator_loss}")
+
+        global_step += 1
 
     torch.save(generator.state_dict(), f"model/generator/epoch_{epoch}.pth")
     torch.save(discriminator.state_dict(), f"model/discriminator/epoch_{epoch}.pth")
 
-dataset = datasets.LSUN(
-    root="lsun",
-    classes="test",
-    transform=transforms.Compose([
-        transforms.CenterCrop((256, 256)),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
-)
+    real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(valid_data_loader)()))
+    frechet_inception_distance = metrics.frechet_inception_distance(real_activations, fake_activations)
 
-data_loader = torch.utils.data.DataLoader(
-    dataset=dataset,
-    batch_size=args.batch_size,
-    shuffle=False
-)
+    summary_writer.add_scalars(
+        main_tag="metrics",
+        tag_scalar_dict=dict(
+            frechet_inception_distance=frechet_inception_distance
+        ),
+        global_step=global_step
+    )
 
-inception_v3 = models.inception_v3(pretrained=True)
+    print(f"frechet_inception_distance: {frechet_inception_distance}")
 
-for param in inception_v3.parameters():
-    param.requires_grad = False
+summary_writer.export_scalars_to_json("scalars.json")
+summary_writer.close()
 
-inception_v3.fc = nn.Identity()
+real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(test_data_loader)()))
+frechet_inception_distance = metrics.frechet_inception_distance(real_activations, fake_activations)
 
-
-def data_generator():
-
-    inception_v3.eval()
-
-    for reals, labels in data_loader:
-
-        with torch.no_grad():
-
-            latents = torch.randn(reals.size(0), hyper_params.latent_size)
-            fakes = generator(latents, labels)
-
-            reals = nn.functional.interpolate(
-                input=reals,
-                size=(299, 299),
-                mode="bilinear"
-            )
-            fakes = nn.functional.interpolate(
-                input=fakes,
-                size=(299, 299),
-                mode="bilinear"
-            )
-
-            real_features = inception_v3(reals)
-            fake_features = inception_v3(fakes)
-
-            yield real_features, fake_features
-
-
-real_features, fake_features = map(torch.cat, zip(*data_generator()))
-frechet_inception_distance = metrics.frechet_inception_distance(real_features, fake_features)
+print("----------------------------------------------------------------")
 print(f"frechet_inception_distance: {frechet_inception_distance}")
+print("----------------------------------------------------------------")
