@@ -147,10 +147,8 @@ class Generator(nn.Module):
 
     def forward(self, latents, labels=None):
 
-        if labels is not None:
-            labels = self.module_dict.embedding_block.embedding(labels)
-            latents = torch.cat((latents, labels), dim=1)
-
+        labels = self.module_dict.embedding_block.embedding(labels)
+        latents = torch.cat((latents, labels), dim=1)
         latents = self.module_dict.embedding_block.pixel_norm(latents)
 
         for linear_block in self.module_dict.linear_blocks:
