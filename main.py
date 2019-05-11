@@ -182,7 +182,7 @@ for epoch in range(args.num_epochs):
         latents = torch.randn(reals.size(0), latent_size).to(device)
         fakes = generator(latents, labels)
 
-        print(fakes.requires_grad_)
+        print(fakes.requires_grad)
         fakes.requires_grad_(True)
         fake_logits = discriminator(fakes.detach(), labels)
 
