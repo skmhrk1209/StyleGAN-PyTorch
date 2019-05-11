@@ -233,14 +233,28 @@ for epoch in range(args.num_epochs):
 
         if step % 100 == 0:
 
+            def unnormalize(inputs, mean, std):
+                mean = torch.tensor(mean).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+                std = torch.tensor(std).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+                outputs = inputs * std + mean
+                return outputs
+
             summary_writer.add_images(
                 tag="images/reals",
-                img_tensor=reals,
+                img_tensor=unnormalize(
+                    inputs=reals,
+                    mean=(0.5, 0.5, 0.5),
+                    std=(0.5, 0.5, 0.5)
+                ),
                 global_step=global_step
             )
             summary_writer.add_images(
                 tag="images/fakes",
-                img_tensor=fakes,
+                img_tensor=unnormalize(
+                    inputs=fakes,
+                    mean=(0.5, 0.5, 0.5),
+                    std=(0.5, 0.5, 0.5)
+                ),
                 global_step=global_step
             )
             summary_writer.add_scalar(
