@@ -3,6 +3,7 @@ import argparse
 import torch
 from torch import nn
 from torch import optim
+from torch.backends import cudnn
 import torchvision
 from torchvision import datasets
 from torchvision import transforms
@@ -11,6 +12,8 @@ from torchvision import models
 from model import *
 import metrics
 import tensorboardX as tbx
+
+cudnn.benchmark = True
 
 
 class Dict(dict):
@@ -172,7 +175,7 @@ global_step = 0
 
 for epoch in range(args.num_epochs):
 
-    for reals, labels in train_data_loader:
+    for step, (reals, labels) in enumerate(train_data_loader):
 
         discriminator.zero_grad()
 
@@ -222,28 +225,32 @@ for epoch in range(args.num_epochs):
         generator_loss.backward(retain_graph=False)
         generator_optimizer.step()
 
-        summary_writer.add_images(
-            tag="images/reals",
-            img_tensor=reals,
-            global_step=global_step
-        )
-        summary_writer.add_images(
-            tag="images/fakes",
-            img_tensor=fakes,
-            global_step=global_step
-        )
-        summary_writer.add_scalar(
-            tag="loss/generator",
-            scalar_value=generator_loss,
-            global_step=global_step
-        )
-        summary_writer.add_scalar(
-            tag="loss/discriminator",
-            scalar_value=discriminator_loss,
-            global_step=global_step
-        )
+        if step % 10 == 0:
 
-        print(f"epoch: {epoch} discriminator_loss: {discriminator_loss} generator_loss: {generator_loss}")
+            print(f"epoch: {epoch} discriminator_loss: {discriminator_loss} generator_loss: {generator_loss}")
+
+            if step % 100 == 0:
+
+                summary_writer.add_images(
+                    tag="images/reals",
+                    img_tensor=reals,
+                    global_step=global_step
+                )
+                summary_writer.add_images(
+                    tag="images/fakes",
+                    img_tensor=fakes,
+                    global_step=global_step
+                )
+                summary_writer.add_scalar(
+                    tag="loss/generator",
+                    scalar_value=generator_loss,
+                    global_step=global_step
+                )
+                summary_writer.add_scalar(
+                    tag="loss/discriminator",
+                    scalar_value=discriminator_loss,
+                    global_step=global_step
+                )
 
         global_step += 1
 
