@@ -179,8 +179,9 @@ for epoch in range(args.num_epochs):
         reals.requires_grad_(True)
         real_logits = discriminator(reals, labels)
 
-        latents = torch.randn(reals.size(0), latent_size).to(device)
-        fakes = generator(latents, labels).detach()
+        with torch.no_grad():
+            latents = torch.randn(reals.size(0), latent_size).to(device)
+            fakes = generator(latents, labels)
 
         fakes.requires_grad_(True)
         fake_logits = discriminator(fakes, labels)
@@ -220,8 +221,6 @@ for epoch in range(args.num_epochs):
         fakes = generator(latents, labels)
         fake_logits = discriminator(fakes, labels)
 
-        print("fakes", fakes.requires_grad)
-
         fake_losses = nn.functional.softplus(-fake_logits)
         generator_losses = fake_losses
 
@@ -232,28 +231,28 @@ for epoch in range(args.num_epochs):
 
         if step % 10 == 0:
 
-            print(f"epoch: {epoch} generator_loss: {generator_loss.item()} discriminator_loss: {discriminator_loss.item()}")
+            print(f"epoch: {epoch} generator_loss: {generator_loss} discriminator_loss: {discriminator_loss}")
 
             if step % 100 == 0:
 
                 summary_writer.add_images(
                     tag="images/reals",
-                    img_tensor=reals.numpy(),
+                    img_tensor=reals,
                     global_step=global_step
                 )
                 summary_writer.add_images(
                     tag="images/fakes",
-                    img_tensor=fakes.numpy(),
+                    img_tensor=fakes,
                     global_step=global_step
                 )
                 summary_writer.add_scalar(
                     tag="loss/generator",
-                    scalar_value=generator_loss.item(),
+                    scalar_value=generator_loss,
                     global_step=global_step
                 )
                 summary_writer.add_scalar(
                     tag="loss/discriminator",
-                    scalar_value=discriminator_loss.item(),
+                    scalar_value=discriminator_loss,
                     global_step=global_step
                 )
 
