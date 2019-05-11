@@ -173,14 +173,17 @@ for epoch in range(args.num_epochs):
 
     for step, (reals, labels) in enumerate(train_data_loader):
 
-        reals.requires_grad_(True)
-
         reals = reals.to(device)
         labels = labels.to(device)
+
+        reals.requires_grad_(True)
         real_logits = discriminator(reals, labels)
 
         latents = torch.randn(reals.size(0), latent_size).to(device)
         fakes = generator(latents, labels)
+
+        print(fakes.requires_grad_)
+        fakes.requires_grad_(True)
         fake_logits = discriminator(fakes.detach(), labels)
 
         real_losses = nn.functional.softplus(-real_logits)
