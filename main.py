@@ -30,8 +30,7 @@ parser.add_argument("--dataset", type=str, default="cifar10")
 args = parser.parse_args()
 
 backends.cudnn.benchmark = True
-device = torch.device("cuda:0")
-print(device)
+device = torch.device("cuda")
 
 latent_size = 512
 generator_learning_rate = 2e-3
@@ -57,8 +56,7 @@ generator = Generator(
     ],
     num_features=512,
     out_channels=3
-)
-generator = generator.to(device)
+).to(device)
 print(generator)
 
 if args.generator_checkpoint:
@@ -71,8 +69,7 @@ discriminator = Discriminator(
     max_channels=512,
     num_classes=10,
     in_channels=3
-)
-discriminator = discriminator.to(device)
+).to(device)
 print(discriminator)
 
 if args.discriminator_checkpoint:

@@ -2,6 +2,8 @@ import torch
 from torch import nn
 import numpy as np
 
+device = torch.device("cuda")
+
 
 class Linear(nn.Module):
 
@@ -214,7 +216,7 @@ class LearnedNoise(nn.Module):
 
     def forward(self, inputs):
 
-        noise = torch.randn(inputs.shape[0], 1, *inputs.shape[2:])
+        noise = torch.randn(inputs.shape[0], 1, *inputs.shape[2:]).to(device)
         outputs = inputs + noise * self.weight
 
         return outputs
