@@ -233,8 +233,6 @@ for epoch in range(args.num_epochs):
 
         if step % 100 == 0:
 
-            print(f"epoch: {epoch} generator_loss: {generator_loss} discriminator_loss: {discriminator_loss}")
-
             summary_writer.add_images(
                 tag="images/reals",
                 img_tensor=reals,
@@ -255,6 +253,8 @@ for epoch in range(args.num_epochs):
                 scalar_value=discriminator_loss,
                 global_step=global_step
             )
+
+            print(f"epoch: {epoch} generator_loss: {generator_loss} discriminator_loss: {discriminator_loss}")
 
         global_step += 1
 
