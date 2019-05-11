@@ -25,6 +25,7 @@ parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--num_epochs", type=int, default=100)
 parser.add_argument("--generator_checkpoint", type=str, default="")
 parser.add_argument("--discriminator_checkpoint", type=str, default="")
+parser.add_argument("--dataset", type=str, default="/content/gdrive/My Drive/lsun")
 args = parser.parse_args()
 
 hyper_params = Dict(
@@ -93,7 +94,7 @@ discriminator_optimizer = optim.Adam(
 )
 
 train_dataset = datasets.LSUN(
-    root="lsun",
+    root=args.dataset,
     classes="train",
     transform=transforms.Compose([
         transforms.CenterCrop((256, 256)),
@@ -109,7 +110,7 @@ train_data_loader = torch.utils.data.DataLoader(
 )
 
 valid_dataset = datasets.LSUN(
-    root="lsun",
+    root=args.dataset,
     classes="val",
     transform=transforms.Compose([
         transforms.CenterCrop((256, 256)),
@@ -125,7 +126,7 @@ valid_data_loader = torch.utils.data.DataLoader(
 )
 
 test_dataset = datasets.LSUN(
-    root="lsun",
+    root=args.dataset,
     classes="test",
     transform=transforms.Compose([
         transforms.CenterCrop((256, 256)),
