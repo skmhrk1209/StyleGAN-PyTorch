@@ -220,7 +220,7 @@ for epoch in range(args.num_epochs):
         fakes = generator(latents, labels)
         fake_logits = discriminator(fakes, labels)
 
-        print(fakes.requires_grad)
+        print("fakes", fakes.requires_grad)
 
         fake_losses = nn.functional.softplus(-fake_logits)
         generator_losses = fake_losses
