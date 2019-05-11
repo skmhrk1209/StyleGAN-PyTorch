@@ -176,16 +176,14 @@ for epoch in range(args.num_epochs):
         reals = reals.to(device)
         labels = labels.to(device)
 
-        print(reals.requires_grad)
-
         reals.requires_grad_(True)
         real_logits = discriminator(reals, labels)
 
         latents = torch.randn(reals.size(0), latent_size).to(device)
         fakes = generator(latents, labels).detach()
-        fake_logits = discriminator(fakes, labels)
 
-        print(fakes.requires_grad)
+        fakes.requires_grad_(True)
+        fake_logits = discriminator(fakes, labels)
 
         real_losses = nn.functional.softplus(-real_logits)
         fake_losses = nn.functional.softplus(fake_logits)
@@ -209,7 +207,7 @@ for epoch in range(args.num_epochs):
                 grad_outputs=torch.ones_like(fake_logits),
                 retain_graph=True,
                 create_graph=True
-            )
+            )[0]
             fake_gradient_penalties = torch.sum(fake_gradients ** 2, dim=(1, 2, 3))
             discriminator_losses += fake_gradient_penalties * fake_gradient_penalty_weight
 
