@@ -25,7 +25,7 @@ parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--num_epochs", type=int, default=100)
 parser.add_argument("--generator_checkpoint", type=str, default="")
 parser.add_argument("--discriminator_checkpoint", type=str, default="")
-parser.add_argument("--dataset", type=str, default="/content/gdrive/My Drive/lsun")
+parser.add_argument("--dataset", type=str, default="cifar10")
 args = parser.parse_args()
 
 hyper_params = Dict(
