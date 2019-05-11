@@ -93,14 +93,15 @@ discriminator_optimizer = optim.Adam(
     eps=hyper_params.discriminator_epsilon
 )
 
-train_dataset = datasets.LSUN(
+train_dataset = datasets.CIFAR10(
     root=args.dataset,
-    classes="train",
+    train=True,
     transform=transforms.Compose([
-        transforms.CenterCrop((256, 256)),
+        transforms.Resize((256, 256)),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
+    ]),
+    download=True
 )
 
 train_data_loader = torch.utils.data.DataLoader(
@@ -109,30 +110,15 @@ train_data_loader = torch.utils.data.DataLoader(
     shuffle=True
 )
 
-valid_dataset = datasets.LSUN(
+test_dataset = datasets.CIFAR10(
     root=args.dataset,
-    classes="val",
+    train=False,
     transform=transforms.Compose([
-        transforms.CenterCrop((256, 256)),
+        transforms.Resize((256, 256)),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
-)
-
-valid_data_loader = torch.utils.data.DataLoader(
-    dataset=valid_dataset,
-    batch_size=args.batch_size,
-    shuffle=False
-)
-
-test_dataset = datasets.LSUN(
-    root=args.dataset,
-    classes="test",
-    transform=transforms.Compose([
-        transforms.CenterCrop((256, 256)),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
+    ]),
+    download=True
 )
 
 test_data_loader = torch.utils.data.DataLoader(
@@ -236,12 +222,24 @@ for epoch in range(args.num_epochs):
         generator_loss.backward(retain_graph=False)
         generator_optimizer.step()
 
-        summary_writer.add_scalars(
-            main_tag="loss",
-            tag_scalar_dict=dict(
-                generator=generator_loss,
-                discriminator=discriminator_loss
-            ),
+        summary_writer.add_images(
+            tag="images/reals",
+            img_tensor=reals,
+            global_step=global_step
+        )
+        summary_writer.add_images(
+            tag="images/fakes",
+            img_tensor=fakes,
+            global_step=global_step
+        )
+        summary_writer.add_scalar(
+            tag="loss/generator",
+            scalar_value=generator_loss,
+            global_step=global_step
+        )
+        summary_writer.add_scalar(
+            tag="loss/discriminator",
+            scalar_value=discriminator_loss,
             global_step=global_step
         )
 
@@ -252,24 +250,17 @@ for epoch in range(args.num_epochs):
     torch.save(generator.state_dict(), f"model/generator/epoch_{epoch}.pth")
     torch.save(discriminator.state_dict(), f"model/discriminator/epoch_{epoch}.pth")
 
-    real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(valid_data_loader)()))
-    frechet_inception_distance = metrics.frechet_inception_distance(real_activations, fake_activations)
+real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(test_data_loader)()))
+frechet_inception_distance = metrics.frechet_inception_distance(real_activations, fake_activations)
 
-    summary_writer.add_scalars(
-        main_tag="metrics",
-        tag_scalar_dict=dict(
-            frechet_inception_distance=frechet_inception_distance
-        ),
-        global_step=global_step
-    )
-
-    print(f"frechet_inception_distance: {frechet_inception_distance}")
+summary_writer.add_scalar(
+    tag="metrics/frechet_inception_distance",
+    scalar_value=frechet_inception_distance,
+    global_step=global_step
+)
 
 summary_writer.export_scalars_to_json("scalars.json")
 summary_writer.close()
-
-real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(test_data_loader)()))
-frechet_inception_distance = metrics.frechet_inception_distance(real_activations, fake_activations)
 
 print("----------------------------------------------------------------")
 print(f"frechet_inception_distance: {frechet_inception_distance}")
