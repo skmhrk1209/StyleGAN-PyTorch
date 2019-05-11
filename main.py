@@ -30,7 +30,7 @@ parser.add_argument("--dataset", type=str, default="cifar10")
 args = parser.parse_args()
 
 backends.cudnn.benchmark = True
-device = torch.device("cuda")
+device = torch.device("cuda:0")
 
 latent_size = 512
 generator_learning_rate = 2e-3
