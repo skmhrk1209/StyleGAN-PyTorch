@@ -234,8 +234,8 @@ for epoch in range(args.num_epochs):
         if step % 100 == 0:
 
             def unnormalize(inputs, mean, std):
-                mean = torch.tensor(mean).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-                std = torch.tensor(std).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+                mean = torch.Tensor(mean).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+                std = torch.Tensor(std).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
                 outputs = inputs * std + mean
                 return outputs
 
