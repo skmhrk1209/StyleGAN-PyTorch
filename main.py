@@ -246,9 +246,7 @@ for epoch in range(args.num_epochs):
                     reals=reals,
                     fakes=fakes
                 ),
-                global_step=global_step,
-                mean=(0.5, 0.5, 0.5),
-                std=(0.5, 0.5, 0.5)
+                global_step=global_step
             )
             summary_writer.add_scalars(
                 main_tag="loss",
