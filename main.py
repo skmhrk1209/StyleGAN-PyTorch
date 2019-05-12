@@ -9,16 +9,9 @@ from torchvision import datasets
 from torchvision import transforms
 from torchvision import utils
 from torchvision import models
-from model import *
+import model
 import metrics
-import tensorboardX as tbx
-
-
-class Dict(dict):
-    def __init__(self, *args, **kwargs): super().__init__(*args, **kwargs)
-    def __getattr__(self, name): return self[name]
-    def __setattr__(self, name, value): self[name] = value
-    def __delattr__(self, name): del self[name]
+from utils import *
 
 
 parser = argparse.ArgumentParser()
@@ -38,14 +31,14 @@ generator_learning_rate = 2e-3
 generator_beta1 = 0.0
 generator_beta2 = 0.99
 generator_epsilon = 1e-8
-discriminator_learning_rate = 2e-3
+discriminator_learning_rate = 1e-3
 discriminator_beta1 = 0.0
 discriminator_beta2 = 0.99
 discriminator_epsilon = 1e-8
 real_gradient_penalty_weight = 5.0
 fake_gradient_penalty_weight = 0.0
 
-generator = Generator(
+generator = model.Generator(
     min_resolution=4,
     max_resolution=256,
     min_channels=16,
@@ -63,7 +56,7 @@ print(generator)
 if args.generator_checkpoint:
     generator.load_state_dict(torch.load(args.generator_checkpoint))
 
-discriminator = Discriminator(
+discriminator = model.Discriminator(
     min_resolution=4,
     max_resolution=256,
     min_channels=16,
@@ -167,7 +160,7 @@ def create_activation_generator(data_loader):
     return activation_generator
 
 
-summary_writer = tbx.SummaryWriter(args.model_directory)
+summary_writer = SummaryWriter(args.model_directory)
 global_step = 0
 
 for epoch in range(args.num_epochs):
@@ -232,38 +225,22 @@ for epoch in range(args.num_epochs):
 
         if step % 100 == 0:
 
-            def unnormalize(inputs, mean, std):
-                mean = torch.Tensor(mean).unsqueeze(0).unsqueeze(-1).unsqueeze(-1).to(inputs.device)
-                std = torch.Tensor(std).unsqueeze(0).unsqueeze(-1).unsqueeze(-1).to(inputs.device)
-                outputs = inputs * std + mean
-                return outputs
-
             summary_writer.add_images(
-                tag="images/reals",
-                img_tensor=unnormalize(
-                    inputs=reals,
-                    mean=(0.5, 0.5, 0.5),
-                    std=(0.5, 0.5, 0.5)
+                main_tag="images",
+                tag_images_dict=dict(
+                    reals=reals,
+                    fakes=fakes
                 ),
-                global_step=global_step
+                global_step=global_step,
+                mean=(0.5, 0.5, 0.5),
+                std=(0.5, 0.5, 0.5)
             )
-            summary_writer.add_images(
-                tag="images/fakes",
-                img_tensor=unnormalize(
-                    inputs=fakes,
-                    mean=(0.5, 0.5, 0.5),
-                    std=(0.5, 0.5, 0.5)
+            summary_writer.add_scalars(
+                main_tag="loss",
+                tag_scalar_dict=dict(
+                    generator=generator_loss,
+                    discriminator=discriminator_loss
                 ),
-                global_step=global_step
-            )
-            summary_writer.add_scalar(
-                tag="loss/generator",
-                scalar_value=generator_loss,
-                global_step=global_step
-            )
-            summary_writer.add_scalar(
-                tag="loss/discriminator",
-                scalar_value=discriminator_loss,
                 global_step=global_step
             )
 
@@ -277,9 +254,12 @@ for epoch in range(args.num_epochs):
 real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(test_data_loader)()))
 frechet_inception_distance = metrics.frechet_inception_distance(real_activations.numpy(), fake_activations.numpy())
 
-summary_writer.add_scalar(
-    tag="metrics/frechet_inception_distance",
-    scalar_value=frechet_inception_distance,
+
+summary_writer.add_scalars(
+    main_tag="metrics",
+    tag_scalar_dict=dict(
+        frechet_inception_distance=frechet_inception_distance
+    ),
     global_step=global_step
 )
 

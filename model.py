@@ -147,9 +147,10 @@ class Generator(nn.Module):
 
     def forward(self, latents, labels=None):
 
-        labels = self.module_dict.embedding_block.embedding(labels)
-        latents = torch.cat((latents, labels), dim=1)
-        latents = self.module_dict.embedding_block.pixel_norm(latents)
+        if labels:
+            labels = self.module_dict.embedding_block.embedding(labels)
+            latents = torch.cat((latents, labels), dim=1)
+            latents = self.module_dict.embedding_block.pixel_norm(latents)
 
         for linear_block in self.module_dict.linear_blocks:
             latents = linear_block.linear(latents)
@@ -272,7 +273,7 @@ class Discriminator(nn.Module):
             ))
         ))
 
-    def forward(self, images, labels):
+    def forward(self, images, labels=None):
 
         outputs = self.module_dict.color_block.conv2d(images)
         outputs = self.module_dict.color_block.leaky_relu(outputs)
@@ -294,7 +295,9 @@ class Discriminator(nn.Module):
         outputs = self.module_dict.conv_block.second.leaky_relu(outputs)
 
         outputs = self.module_dict.conv_block.third.linear(outputs)
-        outputs = torch.gather(outputs, dim=1, index=labels.unsqueeze(-1))
-        outputs = outputs.squeeze(-1)
+
+        if labels:
+            outputs = torch.gather(outputs, dim=1, index=labels.unsqueeze(-1))
+            outputs = outputs.squeeze(-1)
 
         return outputs
