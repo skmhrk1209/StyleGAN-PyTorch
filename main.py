@@ -24,8 +24,7 @@ class Dict(dict):
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--num_epochs", type=int, default=100)
-parser.add_argument("--generator_directory", type=str, default="")
-parser.add_argument("--discriminator_directory", type=str, default="")
+parser.add_argument("--model_directory", type=str, default="model")
 parser.add_argument("--generator_checkpoint", type=str, default="")
 parser.add_argument("--discriminator_checkpoint", type=str, default="")
 parser.add_argument("--dataset", type=str, default="cifar10")
@@ -168,7 +167,7 @@ def create_activation_generator(data_loader):
     return activation_generator
 
 
-summary_writer = tbx.SummaryWriter()
+summary_writer = tbx.SummaryWriter(args.model_directory)
 global_step = 0
 
 for epoch in range(args.num_epochs):
@@ -234,8 +233,8 @@ for epoch in range(args.num_epochs):
         if step % 100 == 0:
 
             def unnormalize(inputs, mean, std):
-                mean = torch.Tensor(mean).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-                std = torch.Tensor(std).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+                mean = torch.Tensor(mean).unsqueeze(0).unsqueeze(-1).unsqueeze(-1).to(inputs.device)
+                std = torch.Tensor(std).unsqueeze(0).unsqueeze(-1).unsqueeze(-1).to(inputs.device)
                 outputs = inputs * std + mean
                 return outputs
 
@@ -272,8 +271,8 @@ for epoch in range(args.num_epochs):
 
         global_step += 1
 
-    torch.save(generator.state_dict(), f"{args.generator_directory}/epoch_{epoch}.pth")
-    torch.save(discriminator.state_dict(), f"{args.discriminator_directory}/epoch_{epoch}.pth")
+    torch.save(generator.state_dict(), f"{args.model_directory}/generator/epoch_{epoch}.pth")
+    torch.save(discriminator.state_dict(), f"{args.model_directory}/discriminator/epoch_{epoch}.pth")
 
 real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(test_data_loader)()))
 frechet_inception_distance = metrics.frechet_inception_distance(real_activations.numpy(), fake_activations.numpy())
@@ -284,7 +283,7 @@ summary_writer.add_scalar(
     global_step=global_step
 )
 
-summary_writer.export_scalars_to_json("scalars.json")
+summary_writer.export_scalars_to_json(f"{args.model_directory}/scalars.json")
 summary_writer.close()
 
 print("----------------------------------------------------------------")
