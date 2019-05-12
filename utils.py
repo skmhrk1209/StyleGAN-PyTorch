@@ -15,13 +15,14 @@ class SummaryWriter(tbx.SummaryWriter):
                    walltime=None, dataformats="NCHW", mean=None, std=None):
 
         def unnormalize(images, mean, std):
-            if std:
-                std = torch.Tensor(std).to(images.device)
-                images *= std.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-            if mean:
-                mean = torch.Tensor(mean).to(images.device)
-                images += mean.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-            return images
+            with torch.no_grad():
+                if std:
+                    std = torch.Tensor(std).to(images.device)
+                    images *= std.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+                if mean:
+                    mean = torch.Tensor(mean).to(images.device)
+                    images += mean.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+                return images
 
         for tag, images in tag_images_dict.items():
             self.file_writer.add_summary(
