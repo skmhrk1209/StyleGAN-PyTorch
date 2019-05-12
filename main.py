@@ -160,6 +160,17 @@ def create_activation_generator(data_loader):
     return activation_generator
 
 
+def unnormalize(images, mean, std):
+
+    std = torch.Tensor(std).to(images.device)
+    images *= std.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+
+    mean = torch.Tensor(mean).to(images.device)
+    images += mean.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+
+    return images
+
+
 summary_writer = SummaryWriter(args.model_directory)
 global_step = 0
 
@@ -224,6 +235,10 @@ for epoch in range(args.num_epochs):
         generator_optimizer.step()
 
         if step % 100 == 0:
+
+            with torch.no_grad():
+                reals = unnormalize(reals, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                fakes = unnormalize(fakes, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 
             summary_writer.add_images(
                 main_tag="images",
