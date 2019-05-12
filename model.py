@@ -147,7 +147,7 @@ class Generator(nn.Module):
 
     def forward(self, latents, labels=None):
 
-        if labels:
+        if labels is not None:
             labels = self.module_dict.embedding_block.embedding(labels)
             latents = torch.cat((latents, labels), dim=1)
             latents = self.module_dict.embedding_block.pixel_norm(latents)
@@ -296,7 +296,7 @@ class Discriminator(nn.Module):
 
         outputs = self.module_dict.conv_block.third.linear(outputs)
 
-        if labels:
+        if labels is not None:
             outputs = torch.gather(outputs, dim=1, index=labels.unsqueeze(-1))
             outputs = outputs.squeeze(-1)
 
