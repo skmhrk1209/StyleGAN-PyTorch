@@ -10,8 +10,8 @@ class Linear(nn.Module):
         super().__init__()
 
         weight = nn.Parameter(torch.empty(out_features, in_features))
-
         std = np.sqrt(variance_scale / in_features)
+
         if weight_scale:
             nn.init.normal_(weight, mean=0.0, std=1.0)
             scale = std
@@ -47,8 +47,8 @@ class Embedding(nn.Module):
         super().__init__()
 
         weight = nn.Parameter(torch.empty(num_embeddings, embedding_dim))
-
         std = np.sqrt(variance_scale / num_embeddings)
+
         if weight_scale:
             nn.init.normal_(weight, mean=0.0, std=1.0)
             scale = std
@@ -76,8 +76,8 @@ class Conv2d(nn.Module):
         super().__init__()
 
         weight = nn.Parameter(torch.empty(out_channels, in_channels, kernel_size, kernel_size))
-
         std = np.sqrt(variance_scale / in_channels / kernel_size / kernel_size)
+
         if weight_scale:
             nn.init.normal_(weight, mean=0.0, std=1.0)
             scale = std
@@ -117,8 +117,8 @@ class ConvTranspose2d(nn.Module):
         super().__init__()
 
         weight = nn.Parameter(torch.empty(in_channels, out_channels, kernel_size, kernel_size))
-
         std = np.sqrt(variance_scale / in_channels / kernel_size / kernel_size)
+
         if weight_scale:
             nn.init.normal_(weight, mean=0.0, std=1.0)
             scale = std

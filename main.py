@@ -246,7 +246,7 @@ for epoch in range(args.num_epochs):
         discriminator_optimizer.step()
 
         latents = torch.randn(reals.size(0), latent_size).to(device)
-        latents = mapping_network(latents)
+        latents = mapping_network(latents, labels)
         fakes = generator(latents)
         fake_logits = discriminator(fakes, labels)
 
