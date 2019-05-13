@@ -19,6 +19,7 @@ parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--num_epochs", type=int, default=100)
 parser.add_argument("--generator_checkpoint", type=str, default="")
 parser.add_argument("--discriminator_checkpoint", type=str, default="")
+parser.add_argument("--mapping_network_checkpoint", type=str, default="")
 parser.add_argument("--dataset", type=str, default="cifar10")
 args = parser.parse_args()
 
@@ -26,27 +27,39 @@ backends.cudnn.benchmark = True
 device = torch.device("cuda")
 
 latent_size = 512
+mapping_network_learning_rate = 2e-5
+mapping_network_beta1 = 0.0
+mapping_network_beta2 = 0.99
+mapping_network_epsilon = 1e-8
 generator_learning_rate = 2e-3
 generator_beta1 = 0.0
 generator_beta2 = 0.99
 generator_epsilon = 1e-8
-discriminator_learning_rate = 1e-3
+discriminator_learning_rate = 2e-3
 discriminator_beta1 = 0.0
 discriminator_beta2 = 0.99
 discriminator_epsilon = 1e-8
 real_gradient_penalty_weight = 5.0
 fake_gradient_penalty_weight = 0.0
 
+mapping_network = model.MappingNetwork(
+    embedding_param=Dict(num_embeddings=10, embedding_dim=512),
+    linear_params=[
+        Dict(in_features=1024, out_features=512),
+        *[Dict(in_features=512, out_features=512)] * 6,
+        Dict(in_features=512, out_features=512)
+    ]
+).to(device)
+print(mapping_network)
+
+if args.mapping_network_checkpoint:
+    mapping_network.load_state_dict(torch.load(args.mapping_network_checkpoint))
+
 generator = model.Generator(
     min_resolution=4,
     max_resolution=256,
     min_channels=16,
     max_channels=512,
-    embedding_param=Dict(num_embeddings=10, embedding_dim=512),
-    linear_params=[
-        Dict(in_features=1024, out_features=512),
-        *[Dict(in_features=512, out_features=512)] * 8
-    ],
     num_features=512,
     out_channels=3
 ).to(device)
@@ -68,12 +81,20 @@ print(discriminator)
 if args.discriminator_checkpoint:
     discriminator.load_state_dict(torch.load(args.discriminator_checkpoint))
 
-generator_optimizer = optim.Adam(
-    params=generator.parameters(),
-    lr=generator_learning_rate,
-    betas=(generator_beta1, generator_beta2),
-    eps=generator_epsilon
-)
+generator_optimizer = optim.Adam([
+    dict(
+        params=mapping_network.parameters(),
+        lr=mapping_network_learning_rate,
+        betas=(mapping_network_beta1, mapping_network_beta2),
+        eps=mapping_network_epsilon
+    ),
+    dict(
+        params=generator.parameters(),
+        lr=generator_learning_rate,
+        betas=(generator_beta1, generator_beta2),
+        eps=generator_epsilon
+    )
+])
 
 discriminator_optimizer = optim.Adam(
     params=discriminator.parameters(),
@@ -138,7 +159,8 @@ def create_activation_generator(data_loader):
                 labels = labels.to(device)
 
                 latents = torch.randn(reals.shape[0], latent_size).to(device)
-                fakes = generator(latents, labels)
+                latents = mapping_network(latents, labels)
+                fakes = generator(latents)
 
                 reals = nn.functional.interpolate(
                     input=reals,
@@ -185,7 +207,8 @@ for epoch in range(args.num_epochs):
 
         with torch.no_grad():
             latents = torch.randn(reals.size(0), latent_size).to(device)
-            fakes = generator(latents, labels)
+            latents = mapping_network(latents, labels)
+            fakes = generator(latents)
 
         fakes.requires_grad_(True)
         fake_logits = discriminator(fakes, labels)
@@ -222,7 +245,8 @@ for epoch in range(args.num_epochs):
         discriminator_optimizer.step()
 
         latents = torch.randn(reals.size(0), latent_size).to(device)
-        fakes = generator(latents, labels)
+        latents = mapping_network(latents)
+        fakes = generator(latents)
         fake_logits = discriminator(fakes, labels)
 
         fake_losses = nn.functional.softplus(-fake_logits)

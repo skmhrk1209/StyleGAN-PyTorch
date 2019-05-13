@@ -6,18 +6,11 @@ from collections import OrderedDict
 from modules import *
 
 
-class Generator(nn.Module):
+class MappingNetwork(nn.Module):
 
-    def __init__(self, min_resolution, max_resolution, min_channels, max_channels,
-                 embedding_param, linear_params, num_features, out_channels):
+    def __init__(self, embedding_param, linear_params):
 
         super().__init__()
-
-        min_depth = int(np.log2(min_resolution // min_resolution))
-        max_depth = int(np.log2(max_resolution // min_resolution))
-
-        def resolution(depth): return min_resolution << depth
-        def num_channels(depth): return min(max_channels, min_channels << (max_depth - depth))
 
         self.module_dict = nn.ModuleDict(OrderedDict(
             embedding_block=nn.ModuleDict(OrderedDict(
@@ -41,7 +34,37 @@ class Generator(nn.Module):
                     leaky_relu=nn.LeakyReLU(0.2)
                 ))
                 for linear_param in linear_params
-            ]),
+            ])
+        ))
+
+    def forward(self, latents, labels=None):
+
+        if labels is not None:
+            labels = self.module_dict.embedding_block.embedding(labels)
+            latents = torch.cat((latents, labels), dim=1)
+
+        latents = self.module_dict.embedding_block.pixel_norm(latents)
+
+        for linear_block in self.module_dict.linear_blocks:
+            latents = linear_block.linear(latents)
+            latents = linear_block.leaky_relu(latents)
+
+        return latents
+
+
+class Generator(nn.Module):
+
+    def __init__(self, min_resolution, max_resolution, min_channels, max_channels, num_features, out_channels):
+
+        super().__init__()
+
+        min_depth = int(np.log2(min_resolution // min_resolution))
+        max_depth = int(np.log2(max_resolution // min_resolution))
+
+        def resolution(depth): return min_resolution << depth
+        def num_channels(depth): return min(max_channels, min_channels << (max_depth - depth))
+
+        self.module_dict = nn.ModuleDict(OrderedDict(
             conv_block=nn.ModuleDict(OrderedDict(
                 first=nn.ModuleDict(OrderedDict(
                     leaned_constant=LearnedConstant(
@@ -145,16 +168,7 @@ class Generator(nn.Module):
             ))
         ))
 
-    def forward(self, latents, labels=None):
-
-        if labels is not None:
-            labels = self.module_dict.embedding_block.embedding(labels)
-            latents = torch.cat((latents, labels), dim=1)
-            latents = self.module_dict.embedding_block.pixel_norm(latents)
-
-        for linear_block in self.module_dict.linear_blocks:
-            latents = linear_block.linear(latents)
-            latents = linear_block.leaky_relu(latents)
+    def forward(self, latents):
 
         outputs = self.module_dict.conv_block.first.leaned_constant(latents)
         outputs = self.module_dict.conv_block.first.learned_noise(outputs)
