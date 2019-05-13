@@ -255,6 +255,8 @@ for epoch in range(args.num_epochs):
         generator_loss.backward(retain_graph=False)
         generator_optimizer.step()
 
+        print(f"epoch: {epoch} generator_loss: {generator_loss} discriminator_loss: {discriminator_loss}")
+
         if step % 100 == 0:
 
             with torch.no_grad():
@@ -277,8 +279,6 @@ for epoch in range(args.num_epochs):
                 ),
                 global_step=global_step
             )
-
-            print(f"epoch: {epoch} generator_loss: {generator_loss} discriminator_loss: {discriminator_loss}")
 
         global_step += 1
 
