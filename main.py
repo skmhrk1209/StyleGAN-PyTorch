@@ -20,6 +20,8 @@ parser.add_argument("--num_epochs", type=int, default=100)
 parser.add_argument("--generator_checkpoint", type=str, default="")
 parser.add_argument("--discriminator_checkpoint", type=str, default="")
 parser.add_argument("--mapping_network_checkpoint", type=str, default="")
+parser.add_argument("--checkpoint_directory", type=str, default="checkpoints")
+parser.add_argument("--event_directory", type=str, default="events")
 parser.add_argument("--dataset_directory", type=str, default="cifar10")
 args = parser.parse_args()
 
@@ -193,7 +195,7 @@ def unnormalize(images, mean, std):
     return images
 
 
-summary_writer = SummaryWriter("events")
+summary_writer = SummaryWriter(args.event_directory)
 global_step = 0
 
 for epoch in range(args.num_epochs):
@@ -285,8 +287,8 @@ for epoch in range(args.num_epochs):
 
         global_step += 1
 
-    torch.save(generator.state_dict(), f"checkpoints/generator/epoch_{epoch}.pth")
-    torch.save(discriminator.state_dict(), f"checkpoints/discriminator/epoch_{epoch}.pth")
+    torch.save(generator.state_dict(), f"{args.checkpoint_directory}/generator/epoch_{epoch}.pth")
+    torch.save(discriminator.state_dict(), f"{args.checkpoint_directory}/discriminator/epoch_{epoch}.pth")
 
 real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(test_data_loader)()))
 frechet_inception_distance = metrics.frechet_inception_distance(real_activations.numpy(), fake_activations.numpy())
