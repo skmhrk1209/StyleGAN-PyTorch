@@ -5,8 +5,7 @@ from torch import nn
 from torch import optim
 from torch import backends
 import torchvision
-#from torchvision import datasets
-import lsun as datasets
+from torchvision import datasets
 from torchvision import transforms
 from torchvision import utils
 from torchvision import models
