@@ -113,11 +113,15 @@ train_dataset = datasets.LSUN(
     ])
 )
 
+print("a")
+
 train_data_loader = torch.utils.data.DataLoader(
     dataset=train_dataset,
     batch_size=args.batch_size,
     shuffle=True
 )
+
+print("b")
 
 test_dataset = datasets.LSUN(
     root=args.dataset,
@@ -129,12 +133,15 @@ test_dataset = datasets.LSUN(
     ])
 )
 
+print("c")
+
 test_data_loader = torch.utils.data.DataLoader(
     dataset=test_dataset,
     batch_size=args.batch_size,
     shuffle=False
 )
 
+print("d")
 
 def create_activation_generator(data_loader):
 
