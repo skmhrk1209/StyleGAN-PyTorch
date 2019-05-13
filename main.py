@@ -17,7 +17,6 @@ from utils import *
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--num_epochs", type=int, default=100)
-parser.add_argument("--model_directory", type=str, default="model")
 parser.add_argument("--generator_checkpoint", type=str, default="")
 parser.add_argument("--discriminator_checkpoint", type=str, default="")
 parser.add_argument("--dataset", type=str, default="cifar10")
@@ -171,7 +170,7 @@ def unnormalize(images, mean, std):
     return images
 
 
-summary_writer = SummaryWriter(args.model_directory)
+summary_writer = SummaryWriter("events")
 global_step = 0
 
 for epoch in range(args.num_epochs):
@@ -261,8 +260,8 @@ for epoch in range(args.num_epochs):
 
         global_step += 1
 
-    torch.save(generator.state_dict(), f"{args.model_directory}/generator/epoch_{epoch}.pth")
-    torch.save(discriminator.state_dict(), f"{args.model_directory}/discriminator/epoch_{epoch}.pth")
+    torch.save(generator.state_dict(), f"checkpoints/generator/epoch_{epoch}.pth")
+    torch.save(discriminator.state_dict(), f"checkpoints/discriminator/epoch_{epoch}.pth")
 
 real_activations, fake_activations = map(torch.cat, zip(*create_activation_generator(test_data_loader)()))
 frechet_inception_distance = metrics.frechet_inception_distance(real_activations.numpy(), fake_activations.numpy())
@@ -276,7 +275,7 @@ summary_writer.add_scalars(
     global_step=global_step
 )
 
-summary_writer.export_scalars_to_json(f"{args.model_directory}/scalars.json")
+summary_writer.export_scalars_to_json(f"events/scalars.json")
 summary_writer.close()
 
 print("----------------------------------------------------------------")

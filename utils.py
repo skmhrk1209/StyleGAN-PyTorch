@@ -11,10 +11,10 @@ class Dict(dict):
 
 class SummaryWriter(tbx.SummaryWriter):
 
-    def add_images(self, main_tag, tag_images_dict, global_step=None,
-                   walltime=None, dataformats="NCHW"):
+    def add_images(self, main_tag, tag_images_dict, global_step=None, walltime=None, dataformats="NCHW"):
 
         for tag, images in tag_images_dict.items():
+
             self.file_writer.add_summary(
                 summary=tbx.summary.image(
                     tag=f"{main_tag}/{tag}",
