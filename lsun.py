@@ -13,15 +13,22 @@ else:
 
 class LSUNClass(data.Dataset):
     def __init__(self, root, transform=None, target_transform=None):
+
+        print("bbbbbbbbbbbbbbbbbb")
         import lmdb
         self.root = os.path.expanduser(root)
         self.transform = transform
         self.target_transform = target_transform
 
+        print("bbbbbbbbbbbbbbbbbb")
+
         self.env = lmdb.open(root, max_readers=1, readonly=True, lock=False,
                              readahead=False, meminit=False)
+
+        print("bbbbbbbbbbbbbbbbbb")
         with self.env.begin(write=False) as txn:
             self.length = txn.stat()['entries']
+            print("bbbbbbbbbbbbbbbbbb")
         cache_file = '_cache_' + ''.join(c for c in root if c in string.ascii_letters)
         if os.path.isfile(cache_file):
             self.keys = pickle.load(open(cache_file, "rb"))
@@ -29,6 +36,7 @@ class LSUNClass(data.Dataset):
             with self.env.begin(write=False) as txn:
                 self.keys = [key for key, _ in txn.cursor()]
             pickle.dump(self.keys, open(cache_file, "wb"))
+        print("end")
 
     def __getitem__(self, index):
         img, target = None, None
