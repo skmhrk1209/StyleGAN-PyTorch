@@ -38,7 +38,10 @@ class LSUNClass(data.Dataset):
             print("e")
             with self.env.begin(write=False) as txn:
                 print("g")
-                self.keys = [key for key, _ in txn.cursor()]
+                self.keys = []
+                for key, _ in txn.cursor():
+                    print("aaaaaaaaaaaa")
+                    self.keys.append(key)
                 print("h")
             pickle.dump(self.keys, open(cache_file, "wb"))
             print("f")
