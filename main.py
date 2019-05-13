@@ -81,8 +81,6 @@ print(discriminator)
 if args.discriminator_checkpoint:
     discriminator.load_state_dict(torch.load(args.discriminator_checkpoint))
 
-print("!")
-
 generator_optimizer = optim.Adam([
     dict(
         params=mapping_network.parameters(),
@@ -98,16 +96,12 @@ generator_optimizer = optim.Adam([
     )
 ])
 
-print("!!")
-
 discriminator_optimizer = optim.Adam(
     params=discriminator.parameters(),
     lr=discriminator_learning_rate,
     betas=(discriminator_beta1, discriminator_beta2),
     eps=discriminator_epsilon
 )
-
-print("!!!")
 
 train_dataset = datasets.LSUN(
     root=args.dataset_directory,
@@ -119,15 +113,11 @@ train_dataset = datasets.LSUN(
     ])
 )
 
-print("a")
-
 train_data_loader = torch.utils.data.DataLoader(
     dataset=train_dataset,
     batch_size=args.batch_size,
     shuffle=True
 )
-
-print("b")
 
 test_dataset = datasets.LSUN(
     root=args.dataset,
@@ -139,15 +129,12 @@ test_dataset = datasets.LSUN(
     ])
 )
 
-print("c")
-
 test_data_loader = torch.utils.data.DataLoader(
     dataset=test_dataset,
     batch_size=args.batch_size,
     shuffle=False
 )
 
-print("d")
 
 def create_activation_generator(data_loader):
 
