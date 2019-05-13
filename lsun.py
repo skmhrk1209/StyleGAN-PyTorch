@@ -31,11 +31,15 @@ class LSUNClass(data.Dataset):
             print("bbbbbbbbbbbbbbbbbb")
         cache_file = '_cache_' + ''.join(c for c in root if c in string.ascii_letters)
         if os.path.isfile(cache_file):
+            print("c")
             self.keys = pickle.load(open(cache_file, "rb"))
+            print("d")
         else:
+            print("e")
             with self.env.begin(write=False) as txn:
                 self.keys = [key for key, _ in txn.cursor()]
             pickle.dump(self.keys, open(cache_file, "wb"))
+            print("f")
         print("end")
 
     def __getitem__(self, index):
