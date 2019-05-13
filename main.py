@@ -106,7 +106,7 @@ discriminator_optimizer = optim.Adam(
 
 train_dataset = datasets.LSUN(
     root=args.dataset_directory,
-    classes="train",
+    classes="bedroom_train",
     transform=transforms.Compose([
         transforms.Resize((256, 256)),
         transforms.ToTensor(),
