@@ -107,6 +107,7 @@ train_dataset = datasets.CIFAR10(
     root=args.dataset_directory,
     train=True,
     transform=transforms.Compose([
+        transforms.RandomHorizontalFlip(),
         transforms.Resize((256, 256)),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
