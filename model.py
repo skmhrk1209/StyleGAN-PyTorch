@@ -46,6 +46,7 @@ class MappingNetwork(nn.Module):
         latents = self.module_dict.embedding_block.pixel_norm(latents)
 
         for linear_block in self.module_dict.linear_blocks:
+            print(latents.shape)
             latents = linear_block.linear(latents)
             latents = linear_block.leaky_relu(latents)
 
