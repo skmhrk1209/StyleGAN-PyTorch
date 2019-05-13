@@ -122,7 +122,7 @@ train_data_loader = torch.utils.data.DataLoader(
 )
 
 test_dataset = datasets.CIFAR10(
-    root=args.dataset,
+    root=args.dataset_directory,
     train=False,
     transform=transforms.Compose([
         transforms.Resize((256, 256)),
