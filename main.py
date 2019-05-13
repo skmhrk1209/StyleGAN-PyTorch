@@ -20,7 +20,7 @@ parser.add_argument("--num_epochs", type=int, default=100)
 parser.add_argument("--generator_checkpoint", type=str, default="")
 parser.add_argument("--discriminator_checkpoint", type=str, default="")
 parser.add_argument("--mapping_network_checkpoint", type=str, default="")
-parser.add_argument("--dataset_directory", type=str, default="lsun")
+parser.add_argument("--dataset_directory", type=str, default="cifar10")
 args = parser.parse_args()
 
 backends.cudnn.benchmark = True
@@ -103,14 +103,15 @@ discriminator_optimizer = optim.Adam(
     eps=discriminator_epsilon
 )
 
-train_dataset = datasets.LSUN(
+train_dataset = datasets.CIFAR10(
     root=args.dataset_directory,
-    classes=["bedroom_train"],
+    train=True,
     transform=transforms.Compose([
         transforms.Resize((256, 256)),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
+    ]),
+    download=True
 )
 
 train_data_loader = torch.utils.data.DataLoader(
@@ -119,14 +120,15 @@ train_data_loader = torch.utils.data.DataLoader(
     shuffle=True
 )
 
-test_dataset = datasets.LSUN(
+test_dataset = datasets.CIFAR10(
     root=args.dataset,
-    classes="test",
+    train=False,
     transform=transforms.Compose([
         transforms.Resize((256, 256)),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
+    ]),
+    download=True
 )
 
 test_data_loader = torch.utils.data.DataLoader(
