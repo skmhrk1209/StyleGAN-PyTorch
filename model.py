@@ -50,6 +50,8 @@ class MappingNetwork(nn.Module):
             latents = linear_block.linear(latents)
             latents = linear_block.leaky_relu(latents)
 
+        print("a")
+
         return latents
 
 
